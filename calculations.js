@@ -20,7 +20,7 @@ const state = {
     shortDelay: 2,
     longDelay: 5,
     shortDelayProb: 85,
-    restartProb: 20
+    restartProb: 25
 };
 
 // Chart instances
