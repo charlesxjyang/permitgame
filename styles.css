@@ -274,7 +274,7 @@ h1 {
 }
 
 .permit-bar {
-    height: 28px;
+    height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -340,9 +340,9 @@ h1 {
 .elbow-up {
     position: absolute;
     left: 0;
-    bottom: 0;
+    top: -1.5rem;
     width: 2px;
-    height: 100%;
+    height: calc(100% + 1.5rem);
     background: var(--border);
 }
 
