@@ -305,17 +305,17 @@ h1 {
 
 .loop-section {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     position: relative;
     padding-bottom: 4rem;
 }
 
 .elbow-arrow {
     position: absolute;
-    bottom: 0;
+    bottom: -12px;
     left: 0;
     right: 0;
-    height: 3rem;
+    height: calc(3rem - 12px);
     pointer-events: none;
 }
 
