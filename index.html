@@ -9,12 +9,69 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <!-- Intro Screen -->
+    <!-- Intro Screens -->
     <div class="intro-screen" id="introScreen">
-        <div class="intro-content">
-            <h1 class="intro-title">The Permitting Game</h1>
-            <p class="intro-subtitle">So you want to build an energy project, eh?</p>
-            <button class="intro-btn" id="startBtn">Let's see how it goes →</button>
+        <!-- Page 0: Welcome -->
+        <div class="intro-page active" data-page="0">
+            <div class="intro-content">
+                <h1 class="intro-title">The Permitting Game</h1>
+                <p class="intro-subtitle">So you want to build an energy project, eh?</p>
+                <button class="intro-btn next-page-btn">Let's see how it goes →</button>
+            </div>
+        </div>
+
+        <!-- Page 1: Capitalism & Renewables -->
+        <div class="intro-page" data-page="1">
+            <div class="intro-content">
+                <p class="intro-text">So you want to build an energy project, eh?</p>
+                <p class="intro-text">Well, unfortunately in capitalist society, building something costs money—and people only build things if they can make money...</p>
+                <p class="intro-text highlight">But renewable energy projects are now the lowest cost option and are really profitable!</p>
+                <button class="intro-btn next-page-btn">So how do we know if we make money? →</button>
+            </div>
+        </div>
+
+        <!-- Page 2: NPV & IRR -->
+        <div class="intro-page" data-page="2">
+            <div class="intro-content">
+                <h2 class="intro-heading">The Language of Investment</h2>
+                <div class="concept-box">
+                    <h3>Net Present Value (NPV)</h3>
+                    <p>A dollar today is worth more than a dollar tomorrow. NPV takes all future cash flows from a project and discounts them back to today's value. If NPV > 0, the project creates value.</p>
+                </div>
+                <div class="concept-box">
+                    <h3>Internal Rate of Return (IRR)</h3>
+                    <p>The annual percentage return a project generates. Think of it like the "interest rate" your investment earns. Higher IRR = better investment.</p>
+                </div>
+                <button class="intro-btn next-page-btn">Got it. But how high is high enough? →</button>
+            </div>
+        </div>
+
+        <!-- Page 3: Hurdle Rate -->
+        <div class="intro-page" data-page="3">
+            <div class="intro-content">
+                <h2 class="intro-heading">The Hurdle Rate</h2>
+                <div class="concept-box">
+                    <p>Companies don't just need positive returns—they need returns that beat their <strong>hurdle rate</strong>.</p>
+                    <p>The hurdle rate is the minimum acceptable return, typically 10-15% for energy projects. It accounts for:</p>
+                    <ul class="concept-list">
+                        <li>Cost of capital (what investors expect)</li>
+                        <li>Risk premium (uncertainty demands higher returns)</li>
+                        <li>Opportunity cost (what else could this money do?)</li>
+                    </ul>
+                </div>
+                <p class="intro-text highlight">If IRR > Hurdle Rate → Invest<br>If IRR < Hurdle Rate → Walk away</p>
+                <button class="intro-btn next-page-btn">Simple enough. Let's build! →</button>
+            </div>
+        </div>
+
+        <!-- Page 4: Let's Go -->
+        <div class="intro-page" data-page="4">
+            <div class="intro-content">
+                <h2 class="intro-heading">Ready to Build?</h2>
+                <p class="intro-text">You've got a great renewable energy project. The economics look solid. Returns beat the hurdle rate.</p>
+                <p class="intro-text highlight">What could possibly go wrong?</p>
+                <button class="intro-btn" id="startGameBtn">Start the Simulation →</button>
+            </div>
         </div>
     </div>
 
@@ -30,82 +87,132 @@
             <button class="scenario-btn locked" data-scenario="2">2. Permitting Delay</button>
             <button class="scenario-btn locked" data-scenario="3">3. Uncertain Permitting Delay</button>
             <button class="scenario-btn locked" data-scenario="4">4. Judicial Injunctions</button>
+            <button class="scenario-btn locked" data-scenario="5">5. Conclusion</button>
         </nav>
 
-        <div class="main-grid">
-            <!-- Left: Pipeline visualization -->
-            <div class="panel pipeline-panel">
-                <h2 class="panel-title">Project Pipeline</h2>
-                <div class="pipeline" id="pipeline">
-                    <!-- Populated by JS -->
-                </div>
-            </div>
-
-            <!-- Center Top: Scenario & Controls -->
-            <div class="panel scenario-panel">
+        <!-- Scenario Page 1: Setup -->
+        <div class="scenario-page active" id="scenarioPage1">
+            <div class="single-column">
                 <div class="scenario-info" id="scenarioInfo">
                     <!-- Populated by JS -->
                 </div>
 
-                <div id="controls">
-                    <!-- Populated by JS -->
+                <div class="panel">
+                    <h2 class="panel-title">Project Pipeline</h2>
+                    <div class="pipeline" id="pipeline">
+                        <!-- Populated by JS -->
+                    </div>
                 </div>
 
-                <div class="insight" id="insight">
-                    <!-- Populated by JS -->
+                <div class="panel">
+                    <div id="controls">
+                        <!-- Populated by JS -->
+                    </div>
+
+                    <div class="page-nav">
+                        <button class="nav-btn secondary" id="backToIntroBtn">← Back</button>
+                        <button class="nav-btn primary" id="toAnalysisBtn">See the Numbers →</button>
+                    </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Center Bottom: DCF Chart -->
-            <div class="panel chart-panel">
-                <h2 class="panel-title">Cash Flow Timeline</h2>
-                <div class="chart-legend-custom">
-                    <div class="legend-item-custom">
-                        <div class="legend-line" style="background: #16a34a;"></div>
-                        <span>Cumulative Cash Flow (Nominal)</span>
+        <!-- Scenario Page 2: Analysis -->
+        <div class="scenario-page" id="scenarioPage2">
+            <div class="single-column">
+                <div class="panel">
+                    <h2 class="panel-title">Cash Flow Timeline</h2>
+                    <div class="chart-legend-custom">
+                        <div class="legend-item-custom">
+                            <div class="legend-line" style="background: #16a34a;"></div>
+                            <span>Cumulative Cash Flow (Nominal)</span>
+                        </div>
+                        <div class="legend-item-custom">
+                            <div class="legend-line dashed"></div>
+                            <span>Cumulative Cash Flow (Discounted)</span>
+                        </div>
+                        <div class="legend-item-custom">
+                            <div class="legend-line" style="background: #4ade80;"></div>
+                            <span>Annual Cash Flow</span>
+                        </div>
+                        <div class="legend-item-custom">
+                            <div class="legend-line" style="background: var(--accent-yellow); height: 12px; width: 12px; border-radius: 4px;"></div>
+                            <span>Permitting Delay Period</span>
+                        </div>
                     </div>
-                    <div class="legend-item-custom">
-                        <div class="legend-line dashed"></div>
-                        <span>Cumulative Cash Flow (Discounted)</span>
+                    <div class="chart-container">
+                        <canvas id="dcfChart"></canvas>
                     </div>
-                    <div class="legend-item-custom">
-                        <div class="legend-line" style="background: #4ade80;"></div>
-                        <span>Annual Cash Flow</span>
-                    </div>
-                    <div class="legend-item-custom">
-                        <div class="legend-line" style="background: var(--accent-yellow); height: 12px; width: 12px; border-radius: 4px;"></div>
-                        <span>Permitting Delay Period</span>
+                    <div class="chart-metrics" id="chartMetrics">
+                        <!-- Populated by JS -->
                     </div>
                 </div>
-                <div class="chart-container">
-                    <canvas id="dcfChart"></canvas>
-                </div>
-                <div class="chart-metrics" id="chartMetrics">
-                    <!-- Populated by JS -->
+
+                <div class="panel">
+                    <h2 class="panel-title">Financial Analysis</h2>
+                    <div id="results">
+                        <!-- Populated by JS -->
+                    </div>
+
+                    <div class="decision-box" id="decisionBox">
+                        <div class="decision-label">Investment Decision</div>
+                        <div class="decision-text" id="decisionText">INVEST</div>
+                        <div class="decision-reason" id="decisionReason"></div>
+                    </div>
+
+                    <div class="math-breakdown" id="mathBreakdown">
+                        <!-- Populated by JS -->
+                    </div>
+
+                    <div class="insight" id="insight">
+                        <!-- Populated by JS -->
+                    </div>
+
+                    <div class="page-nav">
+                        <button class="nav-btn secondary" id="backToSetupBtn">← Adjust Parameters</button>
+                        <button class="nav-btn primary" id="nextBtn">Continue to Next Scenario →</button>
+                    </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Right: Financial Results -->
-            <div class="panel results-panel">
-                <h2 class="panel-title">Financial Analysis</h2>
-                <div id="results">
-                    <!-- Populated by JS -->
+        <!-- Conclusion Page -->
+        <div class="scenario-page" id="conclusionPage">
+            <div class="single-column">
+                <div class="scenario-info">
+                    <div class="scenario-title">The Cost of Uncertainty</div>
+                    <div class="scenario-desc">Each layer of regulatory complexity destroys project value. Here's how NPV eroded across each scenario.</div>
                 </div>
 
-                <div class="decision-box" id="decisionBox">
-                    <div class="decision-label">Investment Decision</div>
-                    <div class="decision-text" id="decisionText">INVEST</div>
-                    <div class="decision-reason" id="decisionReason"></div>
+                <div class="panel">
+                    <h2 class="panel-title">NPV Comparison Across Scenarios</h2>
+                    <div class="chart-container" style="height: 350px;">
+                        <canvas id="conclusionChart"></canvas>
+                    </div>
                 </div>
 
-                <div class="math-breakdown" id="mathBreakdown">
-                    <!-- Populated by JS -->
+                <div class="panel">
+                    <h2 class="panel-title">Value Destruction Summary</h2>
+                    <div id="conclusionSummary">
+                        <!-- Populated by JS -->
+                    </div>
                 </div>
 
-                <div class="next-scenario" id="nextScenario">
-                    <button class="next-btn" id="nextBtn">
-                        Continue to Next Scenario →
-                    </button>
+                <div class="insight">
+                    <div class="insight-title">The Bottom Line</div>
+                    <div class="insight-text">
+                        Permitting delays don't just postpone projects—they destroy value.
+                        Uncertainty compounds this effect. What started as a viable investment
+                        can become unbuildable, not because the underlying economics changed,
+                        but because regulatory friction consumed the margin. This is why
+                        streamlining permitting isn't just about speed—it's about unlocking
+                        projects that markets would otherwise fund.
+                    </div>
+                </div>
+
+                <div class="page-nav">
+                    <button class="nav-btn secondary" id="backToScenario4Btn">← Back to Scenario 4</button>
+                    <button class="nav-btn primary" id="restartBtn">Start Over →</button>
                 </div>
             </div>
         </div>

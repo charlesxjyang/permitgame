@@ -2,6 +2,7 @@
 const state = {
     currentScenario: 1,
     unlockedScenarios: 1,
+    currentPage: 1, // 1 = setup, 2 = analysis
 
     // Base parameters
     hurdleRate: 12,
@@ -22,8 +23,9 @@ const state = {
     restartProb: 10
 };
 
-// Chart instance
+// Chart instances
 let dcfChart = null;
+let conclusionChart = null;
 
 // Calculate annual revenue needed to achieve target IRR with no delay
 // Uses numerical solver to match exact cash flow structure
@@ -100,48 +102,60 @@ const scenarios = {
         title: "Scenario 1: The Baseline",
         description: "A simple world: Your company wants to build an energy project and has to evaluate it against a hurdle rate. If expected returns exceed the hurdle, you invest. No delays, no uncertainty.",
         insight: "This is the textbook case. Projects that clear the hurdle get built. In reality, this scenario almost never exists.",
-        pipeline: [
-            { name: "Project Conception", icon: "💡", status: "complete" },
-            { name: "Investment Decision", icon: "💰", status: "active" },
-            { name: "Construction", icon: "🏗️", status: "pending" },
-            { name: "Returns", icon: "📈", status: "pending" }
+        pipelineType: "simple",
+        pipelineStages: [
+            { name: "Invest", status: "active" },
+            { name: "Build", status: "pending" },
+            { name: "Operate", status: "pending" }
         ]
     },
     2: {
         title: "Scenario 2: The Known Delay",
-        description: "In reality, building anything will require a permit.You've already committed capital—land options, engineering, equipment deposits—so the clock is ticking from day one. But in this scenario, we know how long a permit will take. ",
+        description: "In reality, building anything will require a permit. You've already committed capital—land options, engineering, equipment deposits—so the clock is ticking from day one. But in this scenario, we know how long a permit will take.",
         insight: "With capital deployed at t=0, delays are devastating. Your money is tied up earning nothing while you wait. A 3-year delay doesn't just push returns back—it means 3 years of zero return on committed capital. Watch both NPV and IRR drop as you increase the delay.",
-        pipeline: [
-            { name: "Project Conception", icon: "💡", status: "complete" },
-            { name: "Permitting Queue", icon: "📋", status: "delayed", detail: "Waiting..." },
-            { name: "Investment Decision", icon: "💰", status: "active" },
-            { name: "Construction", icon: "🏗️", status: "pending" },
-            { name: "Returns", icon: "📈", status: "pending" }
+        pipelineType: "simple",
+        pipelineStages: [
+            { name: "Invest", status: "active" },
+            { name: "Permit", status: "delayed" },
+            { name: "Build", status: "pending" },
+            { name: "Operate", status: "pending" }
         ]
     },
     3: {
         title: "Scenario 3: The Uncertain Delay",
-        description: "Worse than waiting is not knowing how long you'll wait. Your project faces either a short delay or a long one—you won't know until you're deep in the process.",
+        description: "Worse than waiting is not knowing how long you'll wait. Your permit application might sail through—or trigger additional review.",
         insight: "Here's the key insight: a 50/50 chance between 1 and 3 years is WORSE than a certain 2-year delay, even though the expected wait is the same. Variance destroys value because the bad outcome hurts more than the good outcome helps (convexity of discounting).",
-        pipeline: [
-            { name: "Project Conception", icon: "💡", status: "complete" },
-            { name: "Permitting", icon: "📋", status: "delayed", detail: "Duration unknown" },
-            { name: "Investment Decision", icon: "💰", status: "active" },
-            { name: "Construction", icon: "🏗️", status: "pending" },
-            { name: "Returns", icon: "📈", status: "pending" }
+        pipelineType: "branching",
+        pipelineStages: [
+            { name: "Invest", status: "active" },
+            { name: "Permit", status: "delayed" }
+        ],
+        branches: [
+            { name: "Fast Track", time: "Short", status: "maybe" },
+            { name: "EIS Review", time: "Long", status: "maybe" }
+        ],
+        afterBranch: [
+            { name: "Build", status: "pending" },
+            { name: "Operate", status: "pending" }
         ]
     },
     4: {
         title: "Scenario 4: The Recursive Nightmare",
         description: "Even after you get approval, there's a chance you'll be sent back to the beginning. A lawsuit, a new regulation, a change in administration—suddenly you're re-permitting.",
         insight: "Recursive risk is devastating because it's multiplicative. A 10% restart chance doesn't reduce returns by 10%—it creates a probability-weighted cascade of increasingly delayed scenarios. This is why developers price in massive risk premiums for jurisdictions with litigation exposure.",
-        pipeline: [
-            { name: "Project Conception", icon: "💡", status: "complete" },
-            { name: "Permitting", icon: "📋", status: "delayed", detail: "Duration unknown" },
-            { name: "Approval", icon: "✓", status: "pending", detail: "May be challenged" },
-            { name: "Investment Decision", icon: "💰", status: "active" },
-            { name: "Construction", icon: "🏗️", status: "pending" },
-            { name: "Returns", icon: "📈", status: "pending" }
+        pipelineType: "recursive",
+        pipelineStages: [
+            { name: "Invest", status: "active" },
+            { name: "Permit", status: "delayed" }
+        ],
+        branches: [
+            { name: "Fast Track", time: "Short", status: "maybe" },
+            { name: "EIS Review", time: "Long", status: "maybe" }
+        ],
+        loopPoint: { name: "Lawsuit?", status: "danger" },
+        afterBranch: [
+            { name: "Build", status: "pending" },
+            { name: "Operate", status: "pending" }
         ]
     }
 };
@@ -149,18 +163,88 @@ const scenarios = {
 // Rendering functions
 function renderPipeline() {
     const pipeline = document.getElementById('pipeline');
-    const stages = scenarios[state.currentScenario].pipeline;
+    const scenario = scenarios[state.currentScenario];
 
-    pipeline.innerHTML = stages.map(stage => `
-        <div class="pipeline-stage ${stage.status}">
-            <div class="stage-icon">${stage.icon}</div>
-            <div class="stage-info">
-                <div class="stage-name">${stage.name}</div>
-                ${stage.detail ? `<div class="stage-detail">${stage.detail}</div>` : ''}
-            </div>
-            ${stage.probability ? `<div class="stage-probability">${stage.probability}</div>` : ''}
-        </div>
-    `).join('');
+    let html = '';
+
+    if (scenario.pipelineType === 'simple') {
+        // Simple linear flow
+        html = '<div class="flow-horizontal">';
+        scenario.pipelineStages.forEach((stage, i) => {
+            html += `<div class="flow-box ${stage.status}">${stage.name}</div>`;
+            if (i < scenario.pipelineStages.length - 1) {
+                html += '<div class="flow-arrow">→</div>';
+            }
+        });
+        html += '</div>';
+    } else if (scenario.pipelineType === 'branching') {
+        // Horizontal flow with permit duration branches
+        html = '<div class="flow-horizontal">';
+
+        // Invest
+        html += `<div class="flow-box active">Invest</div>`;
+        html += '<div class="flow-arrow">→</div>';
+
+        // Permit branches (stacked)
+        html += '<div class="permit-branches">';
+        html += '<div class="permit-bar short">Short Permit</div>';
+        html += '<div class="permit-bar long">Long Permit (EIS)</div>';
+        html += '</div>';
+
+        html += '<div class="flow-arrow">→</div>';
+
+        // After permit
+        html += `<div class="flow-box pending">Build</div>`;
+        html += '<div class="flow-arrow">→</div>';
+        html += `<div class="flow-box pending">Operate</div>`;
+
+        html += '</div>';
+    } else if (scenario.pipelineType === 'recursive') {
+        // Horizontal flow with branches AND recursive loop
+        html = '<div class="flow-with-loop">';
+
+        html += '<div class="flow-horizontal">';
+
+        // Invest
+        html += `<div class="flow-box active">Invest</div>`;
+        html += '<div class="flow-arrow">→</div>';
+
+        // Loop section (permit + lawsuit)
+        html += '<div class="loop-section">';
+
+        // Permit branches (stacked)
+        html += '<div class="permit-branches">';
+        html += '<div class="permit-bar short">Short Permit</div>';
+        html += '<div class="permit-bar long">Long Permit (EIS)</div>';
+        html += '</div>';
+
+        html += '<div class="flow-arrow">→</div>';
+
+        // Lawsuit check
+        html += `<div class="flow-box danger">Lawsuit?</div>`;
+
+        // Elbow connector arrow
+        html += '<div class="elbow-arrow">';
+        html += '<div class="elbow-down"></div>';
+        html += '<div class="elbow-left"></div>';
+        html += '<div class="elbow-up"></div>';
+        html += '</div>';
+
+        html += '</div>'; // end loop-section
+
+        html += '<div class="flow-arrow">→</div>';
+
+        // After permit
+        html += `<div class="flow-box pending">Build</div>`;
+        html += '<div class="flow-arrow">→</div>';
+        html += `<div class="flow-box pending">Operate</div>`;
+
+        html += '</div>';
+
+        html += '</div>';
+    }
+
+    pipeline.innerHTML = html;
 }
 
 function renderScenarioInfo() {
@@ -181,14 +265,14 @@ function renderControls() {
     html += `
         <div class="control-group">
             <label class="control-label">Hurdle Rate (Required Return)</label>
-            <div class="control-value">${state.hurdleRate}%</div>
-            <input type="range" id="hurdleRate" min="5" max="25" step="0.5" value="${state.hurdleRate}">
+            <div class="control-value" data-value="hurdleRate">${state.hurdleRate}%</div>
+            <input type="range" id="hurdleRate" min="5" max="25" step="1" value="${state.hurdleRate}">
             <div class="slider-labels"><span>5%</span><span>25%</span></div>
         </div>
         <div class="control-group">
             <label class="control-label">Project Base Return</label>
-            <div class="control-value">${state.baseReturn}%</div>
-            <input type="range" id="baseReturn" min="5" max="30" step="0.5" value="${state.baseReturn}">
+            <div class="control-value" data-value="baseReturn">${state.baseReturn}%</div>
+            <input type="range" id="baseReturn" min="5" max="30" step="1" value="${state.baseReturn}">
             <div class="slider-labels"><span>5%</span><span>30%</span></div>
         </div>
     `;
@@ -199,8 +283,8 @@ function renderControls() {
             html += `
                 <div class="control-group">
                     <label class="control-label">Permitting Delay (Years)</label>
-                    <div class="control-value">${state.knownDelay.toFixed(1)} year${state.knownDelay !== 1 ? 's' : ''}</div>
-                    <input type="range" id="knownDelay" min="0" max="7" step="0.5" value="${state.knownDelay}">
+                    <div class="control-value" data-value="knownDelay">${state.knownDelay} year${state.knownDelay !== 1 ? 's' : ''}</div>
+                    <input type="range" id="knownDelay" min="0" max="7" step="1" value="${state.knownDelay}">
                     <div class="slider-labels"><span>0</span><span>7</span></div>
                 </div>
             `;
@@ -211,26 +295,26 @@ function renderControls() {
         html += `
             <div class="control-group">
                 <label class="control-label">Short Delay (Years)</label>
-                <div class="control-value">${state.shortDelay.toFixed(1)} year${state.shortDelay !== 1 ? 's' : ''}</div>
-                <input type="range" id="shortDelay" min="0" max="5" step="0.5" value="${state.shortDelay}">
+                <div class="control-value" data-value="shortDelay">${state.shortDelay} year${state.shortDelay !== 1 ? 's' : ''}</div>
+                <input type="range" id="shortDelay" min="0" max="5" step="1" value="${state.shortDelay}">
                 <div class="slider-labels"><span>0</span><span>5</span></div>
             </div>
             <div class="control-group">
                 <label class="control-label">Long Delay (Years)</label>
-                <div class="control-value">${state.longDelay.toFixed(1)} year${state.longDelay !== 1 ? 's' : ''}</div>
-                <input type="range" id="longDelay" min="${state.shortDelay}" max="10" step="0.5" value="${state.longDelay}">
-                <div class="slider-labels"><span>${state.shortDelay.toFixed(1)}</span><span>10</span></div>
+                <div class="control-value" data-value="longDelay">${state.longDelay} year${state.longDelay !== 1 ? 's' : ''}</div>
+                <input type="range" id="longDelay" min="${state.shortDelay}" max="10" step="1" value="${state.longDelay}">
+                <div class="slider-labels" data-labels="longDelay"><span>${state.shortDelay}</span><span>10</span></div>
             </div>
             <div class="control-group">
-                <label class="control-label">Probability of Short Delay</label>
-                <div class="control-value">${state.shortDelayProb}%</div>
-                <input type="range" id="shortDelayProb" min="0" max="100" step="5" value="${state.shortDelayProb}">
+                <label class="control-label">Probability of Long Delay</label>
+                <div class="control-value" data-value="longDelayProb">${100 - state.shortDelayProb}%</div>
+                <input type="range" id="longDelayProb" min="0" max="100" step="1" value="${100 - state.shortDelayProb}">
                 <div class="slider-labels"><span>0%</span><span>100%</span></div>
             </div>
-            <div class="prob-bar-container">
+            <div class="prob-bar-container" id="probBarContainer">
                 <div class="prob-bar">
-                    <div class="prob-segment short" style="width: ${state.shortDelayProb}%">${state.shortDelay.toFixed(1)}yr</div>
-                    <div class="prob-segment long" style="width: ${100 - state.shortDelayProb}%">${state.longDelay.toFixed(1)}yr</div>
+                    <div class="prob-segment short" style="width: ${state.shortDelayProb}%">${state.shortDelay}yr</div>
+                    <div class="prob-segment long" style="width: ${100 - state.shortDelayProb}%">${state.longDelay}yr</div>
                 </div>
                 <div class="prob-legend">
                     <div class="legend-item"><div class="legend-dot" style="background: var(--accent-green)"></div> Short delay</div>
@@ -244,34 +328,95 @@ function renderControls() {
         html += `
             <div class="control-group">
                 <label class="control-label">Restart Probability (After Approval)</label>
-                <div class="control-value">${state.restartProb}%</div>
-                <input type="range" id="restartProb" min="0" max="50" step="5" value="${state.restartProb}">
+                <div class="control-value" data-value="restartProb">${state.restartProb}%</div>
+                <input type="range" id="restartProb" min="0" max="50" step="1" value="${state.restartProb}">
                 <div class="slider-labels"><span>0%</span><span>50%</span></div>
             </div>
         `;
     }
 
     controls.innerHTML = html;
+    attachSliderListeners();
+}
 
-    // Add event listeners
-    document.querySelectorAll('input[type="range"]').forEach(input => {
+function attachSliderListeners() {
+    document.querySelectorAll('#controls input[type="range"]').forEach(input => {
         input.addEventListener('input', (e) => {
             const value = parseFloat(e.target.value);
-            state[e.target.id] = value;
+            const id = e.target.id;
+
+            // Handle longDelayProb specially - convert to shortDelayProb
+            if (id === 'longDelayProb') {
+                state.shortDelayProb = 100 - value;
+            } else {
+                state[id] = value;
+            }
 
             // Enforce long delay >= short delay
-            if (e.target.id === 'shortDelay' && state.longDelay < value) {
+            if (id === 'shortDelay' && state.longDelay < value) {
                 state.longDelay = value;
+                const longDelayInput = document.getElementById('longDelay');
+                if (longDelayInput) {
+                    longDelayInput.value = value;
+                    longDelayInput.min = value;
+                }
             }
-            if (e.target.id === 'longDelay' && value < state.shortDelay) {
+            if (id === 'longDelay' && value < state.shortDelay) {
                 state.longDelay = state.shortDelay;
+                e.target.value = state.shortDelay;
             }
 
-            renderControls();
+            // Update display values without re-rendering
+            updateControlDisplays();
             renderResults();
             renderChart();
         });
     });
+}
+
+function updateControlDisplays() {
+    // Update value displays
+    const displays = {
+        hurdleRate: `${state.hurdleRate}%`,
+        baseReturn: `${state.baseReturn}%`,
+        knownDelay: `${state.knownDelay} year${state.knownDelay !== 1 ? 's' : ''}`,
+        shortDelay: `${state.shortDelay} year${state.shortDelay !== 1 ? 's' : ''}`,
+        longDelay: `${state.longDelay} year${state.longDelay !== 1 ? 's' : ''}`,
+        longDelayProb: `${100 - state.shortDelayProb}%`,
+        restartProb: `${state.restartProb}%`
+    };
+
+    Object.keys(displays).forEach(key => {
+        const el = document.querySelector(`[data-value="${key}"]`);
+        if (el) el.textContent = displays[key];
+    });
+
+    // Update long delay min label
+    const longDelayLabels = document.querySelector('[data-labels="longDelay"]');
+    if (longDelayLabels) {
+        longDelayLabels.innerHTML = `<span>${state.shortDelay}</span><span>10</span>`;
+    }
+
+    // Update long delay input min
+    const longDelayInput = document.getElementById('longDelay');
+    if (longDelayInput) {
+        longDelayInput.min = state.shortDelay;
+    }
+
+    // Update probability bar
+    const probBar = document.getElementById('probBarContainer');
+    if (probBar) {
+        probBar.innerHTML = `
+            <div class="prob-bar">
+                <div class="prob-segment short" style="width: ${state.shortDelayProb}%">${state.shortDelay}yr</div>
+                <div class="prob-segment long" style="width: ${100 - state.shortDelayProb}%">${state.longDelay}yr</div>
+            </div>
+            <div class="prob-legend">
+                <div class="legend-item"><div class="legend-dot" style="background: var(--accent-green)"></div> Short delay</div>
+                <div class="legend-item"><div class="legend-dot" style="background: var(--accent-yellow)"></div> Long delay</div>
+            </div>
+        `;
+    }
 }
 
 function renderResults() {
@@ -449,10 +594,8 @@ function generateCashFlows() {
     const delay = getExpectedDelay();
     // Timeline:
     // Year 0: CAPEX deployed (always)
-    // Years 1 to delay: Waiting for permits (carrying costs if applicable)
-    // Years (delay+1) to (delay+projectLife): Operations
-    const operationsStart = Math.floor(delay) + 1;
-    const operationsEnd = Math.floor(delay) + state.projectLife;
+    // Years 1 to delay: Waiting for permits
+    // After delay: Operations for projectLife years
 
     // Get the annual revenue that corresponds to the target IRR
     const annualRevenue = getAnnualRevenue();
@@ -466,7 +609,20 @@ function generateCashFlows() {
     let cumNominal = 0;
     let cumDiscounted = 0;
 
-    // Generate cash flows year by year
+    // Calculate NPV properly accounting for fractional delay
+    // CAPEX at year 0
+    let npv = -state.capex;
+
+    // Discount operating cash flows from when they actually start
+    // Operations begin after delay and run for projectLife years
+    for (let i = 0; i < state.projectLife; i++) {
+        const yearOfCashFlow = delay + 1 + i; // First CF is at delay + 1
+        npv += annualNetCF / Math.pow(1 + state.hurdleRate / 100, yearOfCashFlow);
+    }
+
+    // For display purposes, still generate year-by-year data using floored delay
+    const operationsStart = Math.floor(delay) + 1;
+    const operationsEnd = Math.floor(delay) + state.projectLife;
     const maxYears = Math.max(operationsEnd + 1, 12);
 
     for (let year = 0; year <= maxYears; year++) {
@@ -494,6 +650,16 @@ function generateCashFlows() {
         cumulativeDiscounted.push(cumDiscounted);
     }
 
+    // Calculate IRR using the precise delay
+    const preciseCashFlows = [-state.capex];
+    const delayYears = Math.ceil(delay);
+    for (let i = 0; i < delayYears; i++) {
+        preciseCashFlows.push(0);
+    }
+    for (let i = 0; i < state.projectLife; i++) {
+        preciseCashFlows.push(annualNetCF);
+    }
+
     return {
         years,
         annualCashFlows,
@@ -502,10 +668,10 @@ function generateCashFlows() {
         delay,
         operationsStart,
         operationsEnd,
-        npv: cumDiscounted,
+        npv: npv, // Use precisely calculated NPV
         paybackNominal: findPayback(years, cumulativeNominal),
         paybackDiscounted: findPayback(years, cumulativeDiscounted),
-        irr: calculateIRR(annualCashFlows),
+        irr: calculateIRR(preciseCashFlows),
         annualRevenue,
         annualNetCF
     };
@@ -744,15 +910,268 @@ function renderChart() {
 
 function renderNextButton() {
     const nextBtn = document.getElementById('nextBtn');
-    const hasNext = state.currentScenario < Object.keys(scenarios).length;
 
-    if (hasNext) {
+    if (state.currentScenario < 4) {
         nextBtn.textContent = `Continue to Scenario ${state.currentScenario + 1} →`;
+        nextBtn.disabled = false;
+    } else if (state.currentScenario === 4) {
+        nextBtn.textContent = 'See the Conclusion →';
         nextBtn.disabled = false;
     } else {
         nextBtn.textContent = 'All scenarios complete!';
         nextBtn.disabled = true;
     }
+}
+
+// Calculate NPV for a specific scenario configuration
+function calculateScenarioNPV(scenarioNum) {
+    const annualRevenue = getAnnualRevenue();
+    const annualNetCF = annualRevenue - state.opexRate;
+
+    let delay;
+    switch (scenarioNum) {
+        case 1:
+            delay = 0;
+            break;
+        case 2:
+            delay = state.knownDelay;
+            break;
+        case 3:
+        case 4:
+            const p_short = state.shortDelayProb / 100;
+            const p_long = 1 - p_short;
+            let expectedSingleDelay = p_short * state.shortDelay + p_long * state.longDelay;
+
+            if (scenarioNum >= 4) {
+                const p_restart = state.restartProb / 100;
+                const expectedAttempts = 1 / (1 - p_restart);
+                delay = expectedSingleDelay * expectedAttempts;
+            } else {
+                delay = expectedSingleDelay;
+            }
+            break;
+        default:
+            delay = 0;
+    }
+
+    // Calculate NPV
+    let npv = -state.capex;
+    for (let i = 0; i < state.projectLife; i++) {
+        const yearOfCashFlow = delay + 1 + i;
+        npv += annualNetCF / Math.pow(1 + state.hurdleRate / 100, yearOfCashFlow);
+    }
+    return npv;
+}
+
+function renderConclusionChart() {
+    const ctx = document.getElementById('conclusionChart').getContext('2d');
+
+    // Calculate NPVs for all scenarios
+    const npvs = [
+        calculateScenarioNPV(1),
+        calculateScenarioNPV(2),
+        calculateScenarioNPV(3),
+        calculateScenarioNPV(4)
+    ];
+
+    const scenarioLabels = [
+        'Baseline',
+        'Known Delay',
+        'Uncertain Delay',
+        'Judicial Risk'
+    ];
+
+    if (conclusionChart) {
+        conclusionChart.destroy();
+    }
+
+    conclusionChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: scenarioLabels,
+            datasets: [{
+                label: 'Net Present Value ($M)',
+                data: npvs,
+                backgroundColor: npvs.map(v => v >= 0 ? 'rgba(74, 222, 128, 0.7)' : 'rgba(248, 113, 113, 0.7)'),
+                borderColor: npvs.map(v => v >= 0 ? '#16a34a' : '#dc2626'),
+                borderWidth: 2,
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: '#ffffff',
+                    borderColor: '#e5e0d8',
+                    borderWidth: 2,
+                    titleColor: '#2d2a26',
+                    bodyColor: '#6b6560',
+                    titleFont: {
+                        family: 'JetBrains Mono'
+                    },
+                    bodyFont: {
+                        family: 'JetBrains Mono'
+                    },
+                    callbacks: {
+                        label: (item) => {
+                            const value = item.parsed.y;
+                            const sign = value >= 0 ? '+' : '';
+                            return `NPV: ${sign}$${value.toFixed(1)}M`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        color: '#6b6560',
+                        font: {
+                            family: 'JetBrains Mono',
+                            size: 11,
+                            weight: 600
+                        }
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'NPV ($M)',
+                        color: '#6b6560',
+                        font: {
+                            family: 'JetBrains Mono',
+                            size: 11
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.06)'
+                    },
+                    ticks: {
+                        color: '#6b6560',
+                        font: {
+                            family: 'JetBrains Mono',
+                            size: 10
+                        },
+                        callback: (value) => `$${value}M`
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderConclusionSummary() {
+    const summary = document.getElementById('conclusionSummary');
+
+    const npvs = [
+        { name: 'Baseline (No Delay)', npv: calculateScenarioNPV(1), delay: 0 },
+        { name: `Known Delay (${state.knownDelay.toFixed(1)} yrs)`, npv: calculateScenarioNPV(2), delay: state.knownDelay },
+        { name: 'Uncertain Delay', npv: calculateScenarioNPV(3), delay: state.shortDelayProb / 100 * state.shortDelay + (1 - state.shortDelayProb / 100) * state.longDelay },
+        { name: `+ Judicial Risk (${state.restartProb}% restart)`, npv: calculateScenarioNPV(4), delay: getExpectedDelayForScenario(4) }
+    ];
+
+    const baselineNPV = npvs[0].npv;
+
+    let html = '';
+    npvs.forEach((scenario, i) => {
+        const valueLost = baselineNPV - scenario.npv;
+        const percentLost = baselineNPV > 0 ? (valueLost / baselineNPV * 100) : 0;
+        const npvClass = scenario.npv >= 0 ? 'positive' : 'negative';
+
+        html += `
+            <div class="result-row">
+                <span class="result-label">${scenario.name}</span>
+                <span class="result-value ${npvClass}">${scenario.npv >= 0 ? '+' : ''}$${scenario.npv.toFixed(1)}M</span>
+            </div>
+        `;
+
+        if (i > 0) {
+            html += `
+                <div class="result-row" style="padding-left: 1rem; border-bottom: none; padding-top: 0;">
+                    <span class="result-label" style="font-size: 0.7rem; color: var(--accent-red);">↳ Value destroyed from baseline</span>
+                    <span class="result-value negative" style="font-size: 0.8rem;">-$${valueLost.toFixed(1)}M (${percentLost.toFixed(0)}%)</span>
+                </div>
+            `;
+        }
+    });
+
+    summary.innerHTML = html;
+}
+
+function getExpectedDelayForScenario(scenarioNum) {
+    switch (scenarioNum) {
+        case 1:
+            return 0;
+        case 2:
+            return state.knownDelay;
+        case 3:
+        case 4:
+            const p_short = state.shortDelayProb / 100;
+            const p_long = 1 - p_short;
+            let expectedSingleDelay = p_short * state.shortDelay + p_long * state.longDelay;
+
+            if (scenarioNum >= 4) {
+                const p_restart = state.restartProb / 100;
+                const expectedAttempts = 1 / (1 - p_restart);
+                return expectedSingleDelay * expectedAttempts;
+            }
+            return expectedSingleDelay;
+        default:
+            return 0;
+    }
+}
+
+function showConclusionPage() {
+    state.currentScenario = 5;
+    state.unlockedScenarios = 5;
+
+    // Hide all scenario pages
+    document.getElementById('scenarioPage1').classList.remove('active');
+    document.getElementById('scenarioPage2').classList.remove('active');
+    document.getElementById('conclusionPage').classList.add('active');
+
+    renderScenarioNav();
+    renderConclusionChart();
+    renderConclusionSummary();
+}
+
+function showScenarioPage(pageNum) {
+    state.currentPage = pageNum;
+    const page1 = document.getElementById('scenarioPage1');
+    const page2 = document.getElementById('scenarioPage2');
+    const conclusionPage = document.getElementById('conclusionPage');
+
+    page1.classList.remove('active');
+    page2.classList.remove('active');
+    conclusionPage.classList.remove('active');
+
+    if (pageNum === 1) {
+        page1.classList.add('active');
+    } else {
+        page2.classList.add('active');
+        // Re-render chart when showing analysis page
+        renderChart();
+    }
+}
+
+function goBackToIntro() {
+    const introScreen = document.getElementById('introScreen');
+    const gameContainer = document.getElementById('gameContainer');
+
+    gameContainer.style.display = 'none';
+    introScreen.style.display = 'flex';
+    introScreen.classList.remove('fade-out');
+
+    // Go to last intro page
+    currentIntroPage = 4;
+    showIntroPage(currentIntroPage);
 }
 
 function renderScenarioNav() {
@@ -773,16 +1192,29 @@ function renderScenarioNav() {
 
 function switchScenario(scenario) {
     if (scenario <= state.unlockedScenarios) {
-        state.currentScenario = scenario;
-        renderAll();
+        if (scenario === 5) {
+            showConclusionPage();
+        } else {
+            // Hide conclusion page if visible
+            document.getElementById('conclusionPage').classList.remove('active');
+
+            state.currentScenario = scenario;
+            state.currentPage = 1;
+            showScenarioPage(1);
+            renderAll();
+        }
     }
 }
 
 function nextScenario() {
-    if (state.currentScenario < Object.keys(scenarios).length) {
+    if (state.currentScenario < 4) {
         state.currentScenario++;
         state.unlockedScenarios = Math.max(state.unlockedScenarios, state.currentScenario);
+        state.currentPage = 1;
+        showScenarioPage(1);
         renderAll();
+    } else if (state.currentScenario === 4) {
+        showConclusionPage();
     }
 }
 
@@ -806,8 +1238,65 @@ document.getElementById('scenarioNav').addEventListener('click', (e) => {
 
 document.getElementById('nextBtn').addEventListener('click', nextScenario);
 
+// Page navigation buttons
+document.getElementById('toAnalysisBtn').addEventListener('click', () => {
+    showScenarioPage(2);
+});
+
+document.getElementById('backToSetupBtn').addEventListener('click', () => {
+    showScenarioPage(1);
+});
+
+document.getElementById('backToIntroBtn').addEventListener('click', goBackToIntro);
+
+// Conclusion page buttons
+document.getElementById('backToScenario4Btn').addEventListener('click', () => {
+    document.getElementById('conclusionPage').classList.remove('active');
+    state.currentScenario = 4;
+    showScenarioPage(2);
+    renderAll();
+});
+
+document.getElementById('restartBtn').addEventListener('click', () => {
+    // Reset state
+    state.currentScenario = 1;
+    state.unlockedScenarios = 1;
+    state.currentPage = 1;
+
+    // Hide conclusion, show intro
+    document.getElementById('conclusionPage').classList.remove('active');
+    document.getElementById('gameContainer').style.display = 'none';
+    document.getElementById('introScreen').style.display = 'flex';
+    document.getElementById('introScreen').classList.remove('fade-out');
+
+    currentIntroPage = 0;
+    showIntroPage(currentIntroPage);
+});
+
 // Intro screen handler
-document.getElementById('startBtn').addEventListener('click', () => {
+let currentIntroPage = 0;
+const totalIntroPages = 5;
+
+function showIntroPage(pageNum) {
+    const pages = document.querySelectorAll('.intro-page');
+    pages.forEach(page => page.classList.remove('active'));
+
+    const targetPage = document.querySelector(`.intro-page[data-page="${pageNum}"]`);
+    if (targetPage) {
+        targetPage.classList.add('active');
+    }
+}
+
+// Next page buttons
+document.querySelectorAll('.next-page-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        currentIntroPage++;
+        showIntroPage(currentIntroPage);
+    });
+});
+
+// Start game button
+document.getElementById('startGameBtn').addEventListener('click', () => {
     const introScreen = document.getElementById('introScreen');
     const gameContainer = document.getElementById('gameContainer');
 
