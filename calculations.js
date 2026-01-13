@@ -5,8 +5,8 @@ const state = {
     currentPage: 1, // 1 = setup, 2 = analysis
 
     // Base parameters
-    hurdleRate: 12,
-    baseReturn: 18, // Target IRR for the project with no delay
+    hurdleRate: 8,
+    baseReturn: 11, // Target IRR for the project with no delay
     projectValue: 100, // $100M project for illustration
 
     // Project structure (renewable energy style)
@@ -100,8 +100,8 @@ function calculateIRRFromFlows(cashFlows) {
 const scenarios = {
     1: {
         title: "Scenario 1: The Baseline",
-        description: "A simple world: Your company wants to build an energy project and has to evaluate it against a hurdle rate. If expected returns exceed the hurdle, you invest. No delays, no uncertainty.",
-        insight: "This is the textbook case. Projects that clear the hurdle get built. In reality, this scenario almost never exists.",
+        description: "Start with the textbook case. You've got a project, you've got a hurdle rate. If returns clear the bar, you build. No permitting, no delays, no uncertainty. Just pure economics.",
+        insight: "This is how investment decisions would work in a frictionless world. Projects that pencil out get built; projects that don't, don't. Simple. Of course, this scenario exists approximately nowhere.",
         pipelineType: "simple",
         pipelineStages: [
             { name: "Invest", status: "active" },
@@ -111,8 +111,8 @@ const scenarios = {
     },
     2: {
         title: "Scenario 2: The Known Delay",
-        description: "In reality, building anything will require a permit. You've already committed capital—land options, engineering, equipment deposits—so the clock is ticking from day one. But in this scenario, we know how long a permit will take.",
-        insight: "With capital deployed at t=0, delays are devastating. Your money is tied up earning nothing while you wait. A 3-year delay doesn't just push returns back—it means 3 years of zero return on committed capital. Watch both NPV and IRR drop as you increase the delay.",
+        description: "Now add a permit. Here's the thing: you've already committed capital—land options, interconnection deposits, engineering work. That money is deployed at day zero. The clock starts ticking whether or not you have approval to build.",
+        insight: "Even when you know exactly how long a permit takes, delays are brutal. Capital sits idle, earning nothing, while you wait. A 3-year delay doesn't just push your returns back three years—it means three years of zero return on money you've already spent. Watch the IRR decay as you drag the slider right.",
         pipelineType: "simple",
         pipelineStages: [
             { name: "Invest", status: "active" },
@@ -123,8 +123,8 @@ const scenarios = {
     },
     3: {
         title: "Scenario 3: The Uncertain Delay",
-        description: "Worse than waiting is not knowing how long you'll wait. Your permit application might sail through—or trigger additional review.",
-        insight: "Here's the key insight: a 50/50 chance between 1 and 3 years is WORSE than a certain 2-year delay, even though the expected wait is the same. Variance destroys value because the bad outcome hurts more than the good outcome helps (convexity of discounting).",
+        description: "Worse than waiting is not knowing how long you'll wait. Maybe your application sails through. Maybe it triggers a full Environmental Impact Statement and years of review. You won't know until you're in it.",
+        insight: "Here's where it gets interesting: a 50/50 chance between 1 and 3 years is worse than a guaranteed 2-year delay, even though the expected wait time is identical. This isn't intuition—it's math. The present value function is convex, so variance in timing destroys value even when the mean stays constant. Uncertainty has a cost.",
         pipelineType: "branching",
         pipelineStages: [
             { name: "Invest", status: "active" },
@@ -140,9 +140,9 @@ const scenarios = {
         ]
     },
     4: {
-        title: "Scenario 4: The Recursive Nightmare",
-        description: "Even after you get approval, there's a chance you'll be sent back to the beginning. A lawsuit, a new regulation, a change in administration—suddenly you're re-permitting.",
-        insight: "Recursive risk is devastating because it's multiplicative. A 10% restart chance doesn't reduce returns by 10%—it creates a probability-weighted cascade of increasingly delayed scenarios. This is why developers price in massive risk premiums for jurisdictions with litigation exposure.",
+        title: "Scenario 4: Litigation Risk",
+        description: "You got your permit. Congratulations. Now someone sues, and you're back to square one. New administration, new interpretation, new environmental review. The approval you spent years obtaining just evaporated.",
+        insight: "Litigation risk is multiplicative, not additive. A 10% chance of restart doesn't knock 10% off your returns—it creates a probability-weighted cascade of increasingly delayed scenarios. Each loop through the process has another 10% chance of restarting. This is why developers demand massive risk premiums in jurisdictions with litigation exposure, and why some projects that would otherwise pencil out simply don't get built.",
         pipelineType: "recursive",
         pipelineStages: [
             { name: "Invest", status: "active" },
@@ -429,7 +429,7 @@ function renderResults() {
     const baselineNPV = calculateBaselineNPV();
     const npvLost = baselineNPV - npv;
 
-    const willInvest = npv >= 0; // Decision based on NPV at hurdle rate
+    const willInvest = irr >= state.hurdleRate; // Decision based on IRR vs hurdle rate
     const spread = irr - state.hurdleRate;
 
     // Results panel
@@ -494,8 +494,8 @@ function renderResults() {
     decisionBox.className = `decision-box ${willInvest ? 'invest' : 'reject'}`;
     decisionText.textContent = willInvest ? 'INVEST' : 'REJECT';
     decisionReason.textContent = willInvest
-        ? `NPV of $${npv.toFixed(1)}M is positive at ${state.hurdleRate}% hurdle`
-        : `NPV of $${npv.toFixed(1)}M is negative at ${state.hurdleRate}% hurdle`;
+        ? `IRR of ${irr.toFixed(1)}% exceeds ${state.hurdleRate}% hurdle rate`
+        : `IRR of ${irr.toFixed(1)}% is below ${state.hurdleRate}% hurdle rate`;
 
     // Math breakdown
     const mathBreakdown = document.getElementById('mathBreakdown');
@@ -1247,7 +1247,16 @@ document.getElementById('backToSetupBtn').addEventListener('click', () => {
     showScenarioPage(1);
 });
 
-document.getElementById('backToIntroBtn').addEventListener('click', goBackToIntro);
+document.getElementById('backToIntroBtn').addEventListener('click', () => {
+    if (state.currentScenario === 1) {
+        goBackToIntro();
+    } else {
+        // Go to previous scenario's analysis page
+        state.currentScenario--;
+        showScenarioPage(2);
+        renderAll();
+    }
+});
 
 // Conclusion page buttons
 document.getElementById('backToScenario4Btn').addEventListener('click', () => {
