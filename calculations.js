@@ -16,9 +16,9 @@ const state = {
     constructionTime: 1, // 1 year to build after permits
 
     // Scenario-specific
-    knownDelay: 1,
-    shortDelay: 1,
-    longDelay: 3,
+    knownDelay: 2,
+    shortDelay: 2,
+    longDelay: 5,
     shortDelayProb: 50,
     restartProb: 10
 };
@@ -1316,4 +1316,55 @@ document.getElementById('startGameBtn').addEventListener('click', () => {
         gameContainer.style.display = 'block';
         renderAll();
     }, 400);
+});
+
+// Enter key navigation
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+
+    // Don't trigger if user is focused on an input element
+    if (document.activeElement.tagName === 'INPUT' ||
+        document.activeElement.tagName === 'TEXTAREA') {
+        return;
+    }
+
+    const introScreen = document.getElementById('introScreen');
+    const gameContainer = document.getElementById('gameContainer');
+
+    // Handle intro screen navigation
+    if (introScreen.style.display !== 'none' && !introScreen.classList.contains('fade-out')) {
+        if (currentIntroPage < totalIntroPages - 1) {
+            // Go to next intro page
+            currentIntroPage++;
+            showIntroPage(currentIntroPage);
+        } else {
+            // On last intro page, start the game
+            document.getElementById('startGameBtn').click();
+        }
+        return;
+    }
+
+    // Handle game/scenario navigation
+    if (gameContainer.style.display !== 'none') {
+        const conclusionPage = document.getElementById('conclusionPage');
+
+        // If on conclusion page
+        if (conclusionPage.classList.contains('active')) {
+            // Enter restarts the game
+            document.getElementById('restartBtn').click();
+            return;
+        }
+
+        // If on scenario page 1 (setup), go to analysis
+        if (state.currentPage === 1) {
+            document.getElementById('toAnalysisBtn').click();
+            return;
+        }
+
+        // If on scenario page 2 (analysis), go to next scenario
+        if (state.currentPage === 2) {
+            document.getElementById('nextBtn').click();
+            return;
+        }
+    }
 });
