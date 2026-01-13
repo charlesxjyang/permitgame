@@ -650,15 +650,8 @@ function generateCashFlows() {
         cumulativeDiscounted.push(cumDiscounted);
     }
 
-    // Calculate IRR using the precise delay
-    const preciseCashFlows = [-state.capex];
-    const delayYears = Math.ceil(delay);
-    for (let i = 0; i < delayYears; i++) {
-        preciseCashFlows.push(0);
-    }
-    for (let i = 0; i < state.projectLife; i++) {
-        preciseCashFlows.push(annualNetCF);
-    }
+    // Calculate IRR using precise fractional delay
+    const irr = calculateIRRWithDelay(state.capex, annualNetCF, delay, state.projectLife);
 
     return {
         years,
@@ -671,10 +664,40 @@ function generateCashFlows() {
         npv: npv, // Use precisely calculated NPV
         paybackNominal: findPayback(years, cumulativeNominal),
         paybackDiscounted: findPayback(years, cumulativeDiscounted),
-        irr: calculateIRR(preciseCashFlows),
+        irr: irr,
         annualRevenue,
         annualNetCF
     };
+}
+
+// Calculate IRR with precise fractional delay using bisection method
+// This properly accounts for cash flows starting at (delay + 1) years
+function calculateIRRWithDelay(capex, annualNetCF, delay, projectLife) {
+    // Find rate r where: -capex + sum(annualNetCF / (1+r)^(delay+i) for i in 1..projectLife) = 0
+    let low = -0.5;
+    let high = 1.0;
+
+    for (let iter = 0; iter < 100; iter++) {
+        const r = (low + high) / 2;
+
+        let npv = -capex;
+        for (let i = 0; i < projectLife; i++) {
+            const yearOfCashFlow = delay + 1 + i;
+            npv += annualNetCF / Math.pow(1 + r, yearOfCashFlow);
+        }
+
+        if (Math.abs(npv) < 0.0001) {
+            return r * 100;
+        }
+
+        if (npv > 0) {
+            low = r; // Rate is too low, need higher rate to reduce NPV
+        } else {
+            high = r; // Rate is too high
+        }
+    }
+
+    return ((low + high) / 2) * 100;
 }
 
 function findPayback(years, cumulative) {
