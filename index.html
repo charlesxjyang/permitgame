@@ -29,8 +29,8 @@
             <div class="intro-content">
                 <p class="intro-text">Here's the thing about building stuff: it costs money. And people generally don't spend money unless they expect to make it back, plus some.</p>
                 <p class="intro-text">This isn't cynicism—it's just how capital allocation works. Money flows toward returns.</p>
-                <p class="intro-text highlight">The good news? Renewables now pencil out. Solar and wind are genuinely profitable. The economics work.</p>
-                <button class="intro-btn next-page-btn">So how do developers actually decide? →</button>
+                <p class="intro-text highlight">The good news? Renewables now pencil out. Solar and wind are genuinely profitable.</p>
+                <button class="intro-btn next-page-btn">So how do developers decide what to build? →</button>
             </div>
         </div>
 
@@ -40,13 +40,13 @@
                 <h2 class="intro-heading">Brass Tacks: The Numbers</h2>
                 <div class="concept-box">
                     <h3>Net Present Value (NPV)</h3>
-                    <p>A dollar today is worth more than a dollar next year. NPV discounts all future cash flows back to present value. Positive NPV means the project creates value; negative means it destroys it.</p>
+                    <p>A dollar today is worth more than a dollar next year. NPV discounts all future cash flows back to present value. Positive NPV means the project creates value; negative means it loses money.</p>
                 </div>
                 <div class="concept-box">
                     <h3>Internal Rate of Return (IRR)</h3>
-                    <p>The annualized return a project generates on invested capital. This is the number that gets compared against alternatives. Higher IRR, more attractive project.</p>
+                    <p>The annualized return a project generates on invested capital. This figure helps decisionmakers compare projects of different sizes and durations. Higher IRR, more attractive project.</p>
                 </div>
-                <button class="intro-btn next-page-btn">What counts as "high enough"? →</button>
+                <button class="intro-btn next-page-btn">What counts as "good enough"? →</button>
             </div>
         </div>
 
@@ -63,7 +63,7 @@
                         <li>Opportunity cost (this money could go elsewhere)</li>
                     </ul>
                 </div>
-                <p class="intro-text highlight">IRR above hurdle → green light<br>IRR below hurdle → project dies</p>
+                <p class="intro-text highlight">IRR &gt; hurdle → green light<br>IRR &lt; hurdle → project dies</p>
                 <button class="intro-btn next-page-btn">Straightforward enough. →</button>
             </div>
         </div>
@@ -83,7 +83,7 @@
     <div class="container" id="gameContainer" style="display: none;">
         <header>
             <h1>The Permitting Game</h1>
-            <p class="subtitle">Why regulatory uncertainty kills projects that "should" get built</p>
+            <p class="subtitle">The Economics of Delay</p>
         </header>
 
         <nav class="scenario-nav" id="scenarioNav">
@@ -185,7 +185,7 @@
             <div class="single-column">
                 <div class="scenario-info">
                     <div class="scenario-title">The Cost of Uncertainty</div>
-                    <div class="scenario-desc">Each layer of regulatory complexity destroys project value. Here's how NPV eroded across each scenario.</div>
+                    <div class="scenario-desc">Each layer of regulation lowers project value. Here's how NPV is eroded across each scenario.</div>
                 </div>
 
                 <div class="panel">
@@ -205,14 +205,7 @@
                 <div class="insight">
                     <div class="insight-title">The Bottom Line</div>
                     <div class="insight-text">
-                        Permitting delays don't just postpone projects—they kill them.
-                        Each layer of regulatory uncertainty consumes margin that would otherwise
-                        make a project viable. What started as a solid investment becomes unbuildable,
-                        not because the technology got worse or the market shifted, but because
-                        process friction ate the returns. This is the part that doesn't show up in
-                        energy models: projects that never get proposed because developers can do the
-                        math upfront. Permitting reform isn't just about speed—it's about unlocking
-                        capital that's currently sitting on the sidelines.
+                        The cost and time to get a permit is not free. Government permits help ensure projects are built safely and responsibly, but also introduce costs to building projects. These costs can mean the difference between building new energy sources online or killing projects. Policymakers should keep these tradeoffs in mind when designing permitting processes.
                     </div>
                 </div>
 
@@ -223,6 +216,15 @@
             </div>
         </div>
     </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <div class="footer-credits">
+                Made with love · Created by <a href="https://charlesyang.io/">Charles Yang</a> · 2025
+            </div>
+            <div class="footer-footnotes" id="footerFootnotes"></div>
+        </div>
+    </footer>
 
     <script src="calculations.js"></script>
 </body>

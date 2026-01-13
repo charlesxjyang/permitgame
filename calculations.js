@@ -19,8 +19,8 @@ const state = {
     knownDelay: 2,
     shortDelay: 2,
     longDelay: 5,
-    shortDelayProb: 50,
-    restartProb: 10
+    shortDelayProb: 85,
+    restartProb: 20
 };
 
 // Chart instances
@@ -111,8 +111,8 @@ const scenarios = {
     },
     2: {
         title: "Scenario 2: The Known Delay",
-        description: "Now add a permit. Here's the thing: you've already committed capital—land options, interconnection deposits, engineering work. That money is deployed at day zero. The clock starts ticking whether or not you have approval to build.",
-        insight: "Even when you know exactly how long a permit takes, delays are brutal. Capital sits idle, earning nothing, while you wait. A 3-year delay doesn't just push your returns back three years—it means three years of zero return on money you've already spent. Watch the IRR decay as you drag the slider right.",
+        description: "In the real world, you need a permit to build. Suppose we know exactly how long it takes and what we need to do to get a permit. How does that impact the economics of a project?",
+        insight: "Even when you know exactly how long a permit takes, delays create costs. Watch how the IRR changes as you drag the slider.",
         pipelineType: "simple",
         pipelineStages: [
             { name: "Invest", status: "active" },
@@ -123,7 +123,7 @@ const scenarios = {
     },
     3: {
         title: "Scenario 3: The Uncertain Delay",
-        description: "Worse than waiting is not knowing how long you'll wait. Maybe your application sails through. Maybe it triggers a full Environmental Impact Statement and years of review. You won't know until you're in it.",
+        description: "Worse than waiting is not knowing how long you'll wait. Maybe your application sails through. Maybe it triggers a full Environmental Impact Statement and years of review. Depending on the project, it may be hard to know in advance how long your permit will take",
         insight: "Here's where it gets interesting: a 50/50 chance between 1 and 3 years is worse than a guaranteed 2-year delay, even though the expected wait time is identical. This isn't intuition—it's math. The present value function is convex, so variance in timing destroys value even when the mean stays constant. Uncertainty has a cost.",
         pipelineType: "branching",
         pipelineStages: [
@@ -141,7 +141,7 @@ const scenarios = {
     },
     4: {
         title: "Scenario 4: Litigation Risk",
-        description: "You got your permit. Congratulations. Now someone sues, and you're back to square one. New administration, new interpretation, new environmental review. The approval you spent years obtaining just evaporated.",
+        description: "You got your permit. Congratulations. Unfortunately, judicial injunctions also exist. if someone sues you, a court can decide you need to redo the entire process.The approval you spent years obtaining just evaporated.",
         insight: "Litigation risk is multiplicative, not additive. A 10% chance of restart doesn't knock 10% off your returns—it creates a probability-weighted cascade of increasingly delayed scenarios. Each loop through the process has another 10% chance of restarting. This is why developers demand massive risk premiums in jurisdictions with litigation exposure, and why some projects that would otherwise pencil out simply don't get built.",
         pipelineType: "recursive",
         pipelineStages: [
@@ -163,88 +163,9 @@ const scenarios = {
 // Rendering functions
 function renderPipeline() {
     const pipeline = document.getElementById('pipeline');
-    const scenario = scenarios[state.currentScenario];
+    const figureNum = state.currentScenario;
 
-    let html = '';
-
-    if (scenario.pipelineType === 'simple') {
-        // Simple linear flow
-        html = '<div class="flow-horizontal">';
-        scenario.pipelineStages.forEach((stage, i) => {
-            html += `<div class="flow-box ${stage.status}">${stage.name}</div>`;
-            if (i < scenario.pipelineStages.length - 1) {
-                html += '<div class="flow-arrow">→</div>';
-            }
-        });
-        html += '</div>';
-    } else if (scenario.pipelineType === 'branching') {
-        // Horizontal flow with permit duration branches
-        html = '<div class="flow-horizontal">';
-
-        // Invest
-        html += `<div class="flow-box active">Invest</div>`;
-        html += '<div class="flow-arrow">→</div>';
-
-        // Permit branches (stacked)
-        html += '<div class="permit-branches">';
-        html += '<div class="permit-bar short">Short Permit</div>';
-        html += '<div class="permit-bar long">Long Permit (EIS)</div>';
-        html += '</div>';
-
-        html += '<div class="flow-arrow">→</div>';
-
-        // After permit
-        html += `<div class="flow-box pending">Build</div>`;
-        html += '<div class="flow-arrow">→</div>';
-        html += `<div class="flow-box pending">Operate</div>`;
-
-        html += '</div>';
-    } else if (scenario.pipelineType === 'recursive') {
-        // Horizontal flow with branches AND recursive loop
-        html = '<div class="flow-with-loop">';
-
-        html += '<div class="flow-horizontal">';
-
-        // Invest
-        html += `<div class="flow-box active">Invest</div>`;
-        html += '<div class="flow-arrow">→</div>';
-
-        // Loop section (permit + lawsuit)
-        html += '<div class="loop-section">';
-
-        // Permit branches (stacked)
-        html += '<div class="permit-branches">';
-        html += '<div class="permit-bar short">Short Permit</div>';
-        html += '<div class="permit-bar long">Long Permit (EIS)</div>';
-        html += '</div>';
-
-        html += '<div class="flow-arrow">→</div>';
-
-        // Lawsuit check
-        html += `<div class="flow-box danger">Lawsuit?</div>`;
-
-        // Elbow connector arrow
-        html += '<div class="elbow-arrow">';
-        html += '<div class="elbow-down"></div>';
-        html += '<div class="elbow-left"></div>';
-        html += '<div class="elbow-up"></div>';
-        html += '</div>';
-
-        html += '</div>'; // end loop-section
-
-        html += '<div class="flow-arrow">→</div>';
-
-        // After permit
-        html += `<div class="flow-box pending">Build</div>`;
-        html += '<div class="flow-arrow">→</div>';
-        html += `<div class="flow-box pending">Operate</div>`;
-
-        html += '</div>';
-
-        html += '</div>';
-    }
-
-    pipeline.innerHTML = html;
+    pipeline.innerHTML = `<img src="assets/fig${figureNum}.png" alt="Scenario ${figureNum} Pipeline" style="max-width: 100%; height: auto;">`;
 }
 
 function renderScenarioInfo() {
@@ -282,7 +203,7 @@ function renderControls() {
         if (state.currentScenario === 2) {
             html += `
                 <div class="control-group">
-                    <label class="control-label">Permitting Delay (Years)</label>
+                    <label class="control-label">Permitting Time (Years)</label>
                     <div class="control-value" data-value="knownDelay">${state.knownDelay} year${state.knownDelay !== 1 ? 's' : ''}</div>
                     <input type="range" id="knownDelay" min="0" max="7" step="1" value="${state.knownDelay}">
                     <div class="slider-labels"><span>0</span><span>7</span></div>
@@ -294,19 +215,19 @@ function renderControls() {
     if (state.currentScenario >= 3) {
         html += `
             <div class="control-group">
-                <label class="control-label">Short Delay (Years)</label>
+                <label class="control-label">Short Permit Timeline (Years)</label>
                 <div class="control-value" data-value="shortDelay">${state.shortDelay} year${state.shortDelay !== 1 ? 's' : ''}</div>
                 <input type="range" id="shortDelay" min="0" max="5" step="1" value="${state.shortDelay}">
                 <div class="slider-labels"><span>0</span><span>5</span></div>
             </div>
             <div class="control-group">
-                <label class="control-label">Long Delay (Years)</label>
+                <label class="control-label">Long Permit Timeline (Years)</label>
                 <div class="control-value" data-value="longDelay">${state.longDelay} year${state.longDelay !== 1 ? 's' : ''}</div>
                 <input type="range" id="longDelay" min="${state.shortDelay}" max="10" step="1" value="${state.longDelay}">
                 <div class="slider-labels" data-labels="longDelay"><span>${state.shortDelay}</span><span>10</span></div>
             </div>
             <div class="control-group">
-                <label class="control-label">Probability of Long Delay</label>
+                <label class="control-label">Probability of Long Permit Timeline</label>
                 <div class="control-value" data-value="longDelayProb">${100 - state.shortDelayProb}%</div>
                 <input type="range" id="longDelayProb" min="0" max="100" step="1" value="${100 - state.shortDelayProb}">
                 <div class="slider-labels"><span>0%</span><span>100%</span></div>
@@ -565,6 +486,21 @@ function renderInsight() {
         <div class="insight-title">💡 Key Insight</div>
         <div class="insight-text">${scenario.insight}</div>
     `;
+}
+
+function renderFooter() {
+    const footnotes = document.getElementById('footerFootnotes');
+
+    const scenarioFootnotes = {
+        1: '',
+        2: '',
+        3: 'For federal U.S. National Environmental Protection Act (NEPA) permits, an Environmental Assessment (EA) can take ~2-3 years, while a full Environmental Impact Statement (EIS) can take 5 years or more. Source: <a href="https://greentape.substack.com/p/nepastats">NEPAstats</a>.',
+        4: 'Solar projects that go through federal U.S. National Environmental Protection Act (NEPA) review face a litigation rate of approximately 60%, though federal agencies usually win those lawsuits on appeal. Source: <a href="https://greentape.substack.com/p/nepastats">NEPAstats</a>.',
+        5: ''
+    };
+
+    const note = scenarioFootnotes[state.currentScenario] || '';
+    footnotes.innerHTML = note ? `<p>${note}</p>` : '';
 }
 
 function getExpectedDelay() {
@@ -926,7 +862,7 @@ function renderChart() {
         </div>
         <div class="chart-metric">
             <div class="chart-metric-value" style="color: var(--accent-yellow);">${data.delay.toFixed(1)} yrs</div>
-            <div class="chart-metric-label">Expected Permitting Delay</div>
+            <div class="chart-metric-label">Expected Permitting Time</div>
         </div>
     `;
 }
@@ -1250,6 +1186,7 @@ function renderAll() {
     renderInsight();
     renderNextButton();
     renderChart();
+    renderFooter();
 }
 
 // Event listeners
