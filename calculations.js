@@ -124,7 +124,7 @@ const scenarios = {
     3: {
         title: "Scenario 3: The Uncertain Delay",
         description: "Worse than waiting is not knowing how long you'll wait. Maybe your application sails through. Maybe it triggers a full Environmental Impact Statement and years of review. Depending on the project, it may be hard to know in advance how long your permit will take",
-        insight: "Here's where it gets interesting: a 50/50 chance between 1 and 3 years is worse than a guaranteed 2-year delay, even though the expected wait time is identical. This isn't intuition—it's math. The present value function is convex, so variance in timing destroys value even when the mean stays constant. Uncertainty has a cost.",
+        insight: "Here's where it gets interesting: a 50/50 chance between 1 and 3 years is worse than a guaranteed 2-year delay, even though the expected wait time is identical. This is because the present value function is convex, so variance in timing destroys value even when the average stays constant (Jensen's Inequality). Uncertainty has a cost.",
         pipelineType: "branching",
         pipelineStages: [
             { name: "Invest", status: "active" },
@@ -142,7 +142,7 @@ const scenarios = {
     4: {
         title: "Scenario 4: Litigation Risk",
         description: "You got your permit. Congratulations. Unfortunately, judicial injunctions also exist. if someone sues you, a court can decide you need to redo the entire process.The approval you spent years obtaining just evaporated.",
-        insight: "Litigation risk is multiplicative, not additive. A 10% chance of restart doesn't knock 10% off your returns—it creates a probability-weighted cascade of increasingly delayed scenarios. Each loop through the process has another 10% chance of restarting. This is why developers demand massive risk premiums in jurisdictions with litigation exposure, and why some projects that would otherwise pencil out simply don't get built.",
+        insight: "Litigation risk is multiplicative, not additive. A 10% chance of restart doesn't knock 10% off your returns—it creates a probability-weighted cascade of increasingly delayed scenarios. This is why developers demand massive risk premiums in jurisdictions with litigation exposure, and why some projects that would otherwise pencil out simply don't get built. This is the \"dark matter\" of permitting, where seemingly profitable projects, even when subsidized, never materialize.",
         pipelineType: "recursive",
         pipelineStages: [
             { name: "Invest", status: "active" },
