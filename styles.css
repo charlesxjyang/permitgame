@@ -698,6 +698,13 @@ input[type="range"]::-webkit-slider-thumb:hover {
     margin-bottom: 3rem;
 }
 
+.cover-image {
+    max-width: 320px;
+    width: 100%;
+    height: auto;
+    margin-bottom: 2rem;
+}
+
 .intro-heading {
     font-family: 'Fraunces', serif;
     font-size: 2rem;
