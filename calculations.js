@@ -344,7 +344,7 @@ function renderResults() {
     const cashFlowData = generateCashFlows();
     const irr = cashFlowData.irr;
     const npv = cashFlowData.npv;
-    const delay = getExpectedDelay();
+    const delay = cashFlowData.delay;
 
     // Calculate baseline NPV (what NPV would be with no delay)
     const baselineNPV = calculateBaselineNPV();
@@ -447,7 +447,7 @@ function renderResults() {
     if (state.currentScenario >= 2) {
         breakdownHtml += `
             <div class="math-line">
-                <span>Permitting Delay</span>
+                <span>Worst-Case Permitting Delay</span>
                 <span>${delay.toFixed(1)} years</span>
             </div>
         `;
@@ -526,8 +526,26 @@ function getExpectedDelay() {
     }
 }
 
+// Worst case delay for cash flow diagram visualization
+function getWorstCaseDelay() {
+    switch (state.currentScenario) {
+        case 1:
+            return 0;
+        case 2:
+            return state.knownDelay;
+        case 3:
+            // Worst case: always get the long delay
+            return state.longDelay;
+        case 4:
+            // Worst case: long delay with one restart (2 cycles)
+            return state.longDelay * 2;
+        default:
+            return 0;
+    }
+}
+
 function generateCashFlows() {
-    const delay = getExpectedDelay();
+    const delay = getWorstCaseDelay();
     // Timeline:
     // Year 0: CAPEX deployed (always)
     // Years 1 to delay: Waiting for permits
@@ -862,7 +880,7 @@ function renderChart() {
         </div>
         <div class="chart-metric">
             <div class="chart-metric-value" style="color: var(--accent-yellow);">${data.delay.toFixed(1)} yrs</div>
-            <div class="chart-metric-label">Expected Permitting Time</div>
+            <div class="chart-metric-label">Worst-Case Permitting Time</div>
         </div>
     `;
 }
@@ -882,36 +900,12 @@ function renderNextButton() {
     }
 }
 
-// Calculate NPV for a specific scenario configuration
+// Calculate NPV for a specific scenario configuration (uses worst case delay)
 function calculateScenarioNPV(scenarioNum) {
     const annualRevenue = getAnnualRevenue();
     const annualNetCF = annualRevenue - state.opexRate;
 
-    let delay;
-    switch (scenarioNum) {
-        case 1:
-            delay = 0;
-            break;
-        case 2:
-            delay = state.knownDelay;
-            break;
-        case 3:
-        case 4:
-            const p_short = state.shortDelayProb / 100;
-            const p_long = 1 - p_short;
-            let expectedSingleDelay = p_short * state.shortDelay + p_long * state.longDelay;
-
-            if (scenarioNum >= 4) {
-                const p_restart = state.restartProb / 100;
-                const expectedAttempts = 1 / (1 - p_restart);
-                delay = expectedSingleDelay * expectedAttempts;
-            } else {
-                delay = expectedSingleDelay;
-            }
-            break;
-        default:
-            delay = 0;
-    }
+    const delay = getWorstCaseDelayForScenario(scenarioNum);
 
     // Calculate NPV
     let npv = -state.capex;
@@ -920,6 +914,24 @@ function calculateScenarioNPV(scenarioNum) {
         npv += annualNetCF / Math.pow(1 + state.hurdleRate / 100, yearOfCashFlow);
     }
     return npv;
+}
+
+// Worst case delay for a specific scenario
+function getWorstCaseDelayForScenario(scenarioNum) {
+    switch (scenarioNum) {
+        case 1:
+            return 0;
+        case 2:
+            return state.knownDelay;
+        case 3:
+            // Worst case: always get the long delay
+            return state.longDelay;
+        case 4:
+            // Worst case: long delay with one restart (2 cycles)
+            return state.longDelay * 2;
+        default:
+            return 0;
+    }
 }
 
 function renderConclusionChart() {
@@ -1032,8 +1044,8 @@ function renderConclusionSummary() {
     const npvs = [
         { name: 'Baseline (No Delay)', npv: calculateScenarioNPV(1), delay: 0 },
         { name: `Known Delay (${state.knownDelay.toFixed(1)} yrs)`, npv: calculateScenarioNPV(2), delay: state.knownDelay },
-        { name: 'Uncertain Delay', npv: calculateScenarioNPV(3), delay: state.shortDelayProb / 100 * state.shortDelay + (1 - state.shortDelayProb / 100) * state.longDelay },
-        { name: `+ Judicial Risk (${state.restartProb}% restart)`, npv: calculateScenarioNPV(4), delay: getExpectedDelayForScenario(4) }
+        { name: `Uncertain Delay (${state.longDelay} yrs worst case)`, npv: calculateScenarioNPV(3), delay: state.longDelay },
+        { name: `+ Judicial Risk (${state.longDelay * 2} yrs worst case)`, npv: calculateScenarioNPV(4), delay: state.longDelay * 2 }
     ];
 
     const baselineNPV = npvs[0].npv;
