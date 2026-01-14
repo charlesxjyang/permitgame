@@ -141,7 +141,7 @@ const scenarios = {
     },
     4: {
         title: "Scenario 4: Litigation Risk",
-        description: "You got your permit. Congratulations. Unfortunately, judicial injunctions also exist. if someone sues you, a court can decide you need to redo the entire process.The approval you spent years obtaining just evaporated.",
+        description: "You got your permit. Congratulations! Unfortunately, at any point, someone can sue you and a court can decide you need to redo the entire process. The approval you spent years working with an agency to obtain just evaporated.",
         insight: "Litigation risk is multiplicative, not additive. A 10% chance of restart doesn't knock 10% off your returns—it creates a probability-weighted cascade of increasingly delayed scenarios. This is why developers demand massive risk premiums in jurisdictions with litigation exposure, and why some projects that would otherwise pencil out simply don't get built. This is the \"dark matter\" of permitting, where seemingly profitable projects, even when subsidized, never materialize.",
         pipelineType: "recursive",
         pipelineStages: [
@@ -423,7 +423,7 @@ function renderResults() {
 
     let breakdownHtml = `
         <div class="math-line">
-            <span>CAPEX (deployed at t=0)</span>
+            <span>CAPEX</span>
             <span>$${state.capex}M</span>
         </div>
         <div class="math-line">
