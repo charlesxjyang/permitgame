@@ -1099,6 +1099,7 @@ function showConclusionPage() {
     renderScenarioNav();
     renderConclusionChart();
     renderConclusionSummary();
+    window.scrollTo(0, 0);
 }
 
 function showScenarioPage(pageNum) {
@@ -1118,6 +1119,7 @@ function showScenarioPage(pageNum) {
         // Re-render chart when showing analysis page
         renderChart();
     }
+    window.scrollTo(0, 0);
 }
 
 function goBackToIntro() {
@@ -1254,6 +1256,7 @@ function showIntroPage(pageNum) {
     if (targetPage) {
         targetPage.classList.add('active');
     }
+    window.scrollTo(0, 0);
 }
 
 // Next page buttons
