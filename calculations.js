@@ -494,8 +494,8 @@ function renderFooter() {
     const scenarioFootnotes = {
         1: '',
         2: '',
-        3: 'For federal U.S. National Environmental Protection Act (NEPA) permits, an Environmental Assessment (EA) can take ~2-3 years, while a full Environmental Impact Statement (EIS) can take 5 years or more. Source: <a href="https://greentape.substack.com/p/nepastats">NEPAstats</a>.',
-        4: 'Solar projects that go through federal U.S. National Environmental Protection Act (NEPA) review face a litigation rate of approximately 60%, though federal agencies usually win those lawsuits on appeal. Source: <a href="https://greentape.substack.com/p/nepastats">NEPAstats</a>.',
+        3: 'For federal U.S. National Environmental Protection Act (NEPA) permits, an Environmental Assessment (EA) can take ~2-3 years, while a full Environmental Impact Statement (EIS) can take 5 years or more. Source: <a href="https://www.greentape.pub/p/nepastats">NEPAstats</a>.',
+        4: 'Solar projects that go through federal U.S. National Environmental Protection Act (NEPA) review face a litigation rate of approximately 60%, though federal agencies usually win those lawsuits on appeal. Source: <a href="https://www.greentape.pub/p/nepastats">NEPAstats</a>.',
         5: ''
     };
 
