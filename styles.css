@@ -814,6 +814,11 @@ input[type="range"]::-webkit-slider-thumb:hover {
     line-height: 1.6;
 }
 
+.cta-text a {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
 .site-footer {
     padding: 1rem;
     margin-top: 2rem;
